@@ -42,7 +42,7 @@ runs:
 
   - name: Build Catalog Image
     shell: bash
-    run: FIRST_OLM_RELEASE=true make catalog-image
+    run: FIRST_OLM_RELEASE=false make catalog-image
 
   - name: Publish catalog image
     shell: bash
