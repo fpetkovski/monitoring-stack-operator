@@ -1,75 +1,58 @@
 ---
-name: OLM Release
+name: OLM Development Channel
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    branches: [main, composite-actions]
 
 jobs:
   release:
     runs-on: ubuntu-latest
     environment: quay
-    env:
-      IMAGE_BASE: "${{ secrets.IMAGE_BASE }}"
     steps:
-      # setup
       - uses: actions/checkout@v2
 
       - name: Initialize ENV vars
+        id: version
         run: |
-          cat $GITHUB_ENV
+          version="$(cat VERSION)-$(date +%y%m%d%H%M%S)"
+          echo "::set-output name=version::$version"
 
-          echo "GITHUB_REF: $GITHUB_REF"
-
-          SOURCE_NAME=${GITHUB_REF#refs/*/}
-          SOURCE_TAG=${GITHUB_REF#refs/tags/}
-
-          if [[ $SOURCE_NAME == main ]]; then
-            VERSION="$(cat VERSION)-$(date +%y%m%d%H%M%S)"
-            CHANNELS=development
-          else
-            VERSION=${SOURCE_NAME##v}
-            CHANNELS=development,stable
-          fi
-
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "CHANNELS=$CHANNELS" >> $GITHUB_ENV
-
-          # TODO(sthaha): uncomment after the first catalog image is released
-          echo "FIRST_OLM_RELEASE=false" >> $GITHUB_ENV
-          echo ---------------------------
-          cat $GITHUB_ENV
-          echo ---------------------------
-
-      - name: Setup Go environment
-        uses: actions/setup-go@v2.1.4
+      - name: Publish
+        uses: ./.github/olm-publish
+        env:
+          IMAGE_BASE: ${{ secrets.IMAGE_BASE }}
+          VERSION: ${{ steps.version.outputs.version }}
+          CHANNEL: development
         with:
-          go-version: 1.16
+          quay_login: ${{ secrets.QUAY_LOGIN }}
+          quay_token: ${{ secrets.QUAY_TOKEN }}
+---
+name: OLM Candidate Channel
 
-      - name: Registry Login
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_LOGIN }}
-          password: ${{ secrets.QUAY_TOKEN }}
+on:
+  push:
+    tags:
+      - v*
 
-      - name: Build Operator Image
-        run: make operator-image
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: quay
+    steps:
+      - uses: actions/checkout@v2
 
-      - name: Publish Operator
-        run: make operator-push
-
-      - name: Build Bundle Image
-        run: make bundle-image
-
-      - name: Publish Bundle
-        run: make bundle-push
-
-      - name: Build Catalog Image
+      - name: Initialize ENV vars
+        id: version
         run: |
-          env | grep CAT
-          make catalog-image
+          version="$(cat VERSION)-$(date +%y%m%d%H%M%S)"
+          echo "::set-output name=version::$version"
 
-      - name: Publish catalog image
-        run: make catalog-push
+      - name: Publish
+        uses: ./.github/olm-publish
+        env:
+          IMAGE_BASE: ${{ secrets.IMAGE_BASE }}
+          CHANNEL: candidate
+        with:
+          quay_login: ${{ secrets.QUAY_LOGIN }}
+          quay_token: ${{ secrets.QUAY_TOKEN }}
