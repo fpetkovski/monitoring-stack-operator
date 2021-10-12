@@ -10,7 +10,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     environment: quay
-
+    env:
+      IMAGE_BASE: "${{ secrets.IMAGE_BASE }}"
     steps:
       # setup
       - uses: actions/checkout@v2
@@ -32,14 +33,11 @@ jobs:
             CHANNELS=development,stable
           fi
 
-          IMAGE_BASE=quay.io/rhobs/monitoring-stack-operator
-
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "CHANNELS=$CHANNELS" >> $GITHUB_ENV
-          echo "IMAGE_BASE=$IMAGE_BASE" >> $GITHUB_ENV
 
           # TODO(sthaha): uncomment after the first catalog image is released
-          # echo "FIRST_OLM_RELEASE=false" >> $GITHUB_ENV
+          echo "FIRST_OLM_RELEASE=false" >> $GITHUB_ENV
           echo ---------------------------
           cat $GITHUB_ENV
           echo ---------------------------
