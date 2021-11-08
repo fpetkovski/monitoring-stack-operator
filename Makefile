@@ -7,6 +7,7 @@ IMAGE_BASE ?= monitoring-stack-operator
 
 VERSION ?= $(shell cat VERSION)
 OPERATOR_IMG = $(IMAGE_BASE):$(VERSION)
+OPERATOR_BUILD_IMG = $(IMAGE_BASE):build
 
 # running `make` builds the operator (default target)
 all: operator
@@ -108,14 +109,21 @@ generate: generate-crds generate-deepcopy generate-kustomize
 operator: generate
 	go build -o ./tmp/operator ./cmd/operator/...
 
-
 .PHONY: operator-image
 operator-image: generate
-	docker build -f build/Dockerfile . -t $(OPERATOR_IMG)
+	docker build -f build/Dockerfile . -t $(OPERATOR_IMG) --cache-from $(OPERATOR_BUILD_IMG)
 
 .PHONY: operator-push
 operator-push:
 	docker push ${OPERATOR_IMG}
+
+.PHONY: operator-build-image
+operator-build-image: generate
+	docker build -f build/Dockerfile . -t $(OPERATOR_BUILD_IMG) --target builder
+
+.PHONY: operator-build-push
+operator-build-push: generate
+	docker push $(OPERATOR_BUILD_IMG)
 
 .PHONY: test-e2e
 test-e2e:

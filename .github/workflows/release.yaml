@@ -58,6 +58,19 @@ jobs:
           quay_login: ${{ secrets.QUAY_LOGIN }}
           quay_token: ${{ secrets.QUAY_TOKEN }}
 
+      - name: Registry Login
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_LOGIN }}
+          password: ${{ secrets.QUAY_TOKEN }}
+
+      - name: Refresh the builder image
+        env:
+          IMAGE_BASE: ${{ secrets.IMAGE_BASE }}
+        run: |
+          make operator-build-image operator-build-push
+
   create-github-prerelease:
     needs:
       - e2e-tests-olm
